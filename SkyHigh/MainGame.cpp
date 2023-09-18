@@ -12,7 +12,29 @@ enum GameObjectType
     TYPE_GEM = 0,
     TYPE_ASTEROID = 1,
     TYPE_AGENT8= 2,
+    TYPE_METEOR=3,
 };
+
+enum Agent8State
+{
+    STATE_APPEAR=0,
+    STATE_FLY=1,
+    STATE_LAUNCH=2,
+    STATE_DEAD=3,
+};
+
+struct GameState
+{
+    int score = 0;
+    Agent8State agentState = STATE_APPEAR;
+    bool isFlying = false; //is agent8 flying?
+};
+
+GameState gameState;
+
+//Agent8 move speed and mouse rotation
+const float AGENT8_MOVESPEED = 200.0f; //speed of agent8
+const float ROTATION_SPEED = 2.0f;
 
 // Number of gems to create
 const int NUM_GEMS = 3;
@@ -33,6 +55,7 @@ void GemCreation();
 void AsteroidCreation();
 void GemBehaviour();
 void AsteroidBehaviour();
+void Agent8FlightControls(float elapsedTime);
 void Draw();
 
 // The entry point for a Windows program
@@ -41,6 +64,10 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
     Play::CreateManager( DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE );
     Play::CentreAllSpriteOrigins();
     Play::LoadBackground( "Data\\Backgrounds\\background1.png" );
+
+    //agent8 creation
+    Play::CreateGameObject(TYPE_AGENT8, { 85, 75 }, 50, "agent8_fly");
+    
     GemCreation(); 
     AsteroidCreation();
 }
@@ -50,7 +77,9 @@ bool MainGameUpdate( float elapsedTime )
 {
     GemBehaviour();
     AsteroidBehaviour();
+    Agent8FlightControls(elapsedTime);
     Draw();
+
     return Play::KeyDown( VK_ESCAPE );
 }
 
@@ -64,6 +93,11 @@ int MainGameExit( void )
 void Draw()
 {
     Play::DrawBackground();
+
+    //Draw agent8
+    GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+    Play::DrawObjectRotated(agent8);
+    
     
     // Draw the Gems
     Play::CollectGameObjectIDsByType(TYPE_GEM);
@@ -148,3 +182,60 @@ void AsteroidBehaviour()
     }
 }
 
+void Agent8FlightControls(float elapsedTime)
+{
+    GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+    
+    //Mouse position current
+    Point2D mousePosition = Play::GetMousePos();
+    float mouseX = mousePosition.x;
+    float mouseY = mousePosition.y;
+
+    //agent 8 to mouse cursor
+    float dx = mouseX - agent8.pos.x;
+    float dy = mouseY - agent8.pos.y;
+
+    float angle = atan2(dy, dx);
+    angle *= ROTATION_SPEED;
+    agent8.rotation = angle;
+
+
+    
+    if (Play::KeyDown(VK_LEFT))
+    {
+        agent8.pos.x -= AGENT8_MOVESPEED * elapsedTime;
+    }
+
+    if (Play::KeyDown(VK_RIGHT))
+    {
+        agent8.pos.x += AGENT8_MOVESPEED * elapsedTime;
+    }
+
+    if (Play::KeyDown(VK_UP))
+    {
+        agent8.pos.y -= AGENT8_MOVESPEED * elapsedTime;
+    }
+
+    if (Play::KeyDown(VK_DOWN))
+    {
+        agent8.pos.y += AGENT8_MOVESPEED * elapsedTime;
+    }
+
+    //wrap around the screen
+    if (agent8.pos.x < 0)
+    {
+        agent8.pos.x = DISPLAY_WIDTH;
+    }
+    else if (agent8.pos.x > DISPLAY_WIDTH)
+    {
+        agent8.pos.x = 0;
+    }
+    if (agent8.pos.y < 0)
+    {
+        agent8.pos.y = DISPLAY_HEIGHT;
+    }
+    else if (agent8.pos.y > DISPLAY_HEIGHT)
+    {
+        agent8.pos.y = 0;
+    }
+}

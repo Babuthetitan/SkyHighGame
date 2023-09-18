@@ -1,6 +1,5 @@
 ﻿  MainGame.cpp
 C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\Play.h(1447,13): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\MainGame.cpp(49,28): warning C4100: 'elapsedTime': unreferenced formal parameter
-C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\MainGame.cpp(98,58): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
-C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\MainGame.cpp(109,62): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
+C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\MainGame.cpp(132,58): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
+C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\MainGame.cpp(143,62): warning C4244: 'argument': conversion from 'const float' to 'int', possible loss of data
   SkyHigh1.vcxproj -> C:\Users\User-1\Documents\GitHub\SkyHighGame\SkyHigh\Build\x64\Debug\SkyHigh1.exe
