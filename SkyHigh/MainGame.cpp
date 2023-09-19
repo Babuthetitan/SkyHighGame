@@ -20,7 +20,8 @@ enum Agent8State
     STATE_APPEAR=0,
     STATE_FLY=1,
     STATE_LAUNCH=2,
-    STATE_DEAD=3,
+    STATE_WALKLEFT=3,
+    STATE_WALKRIGHT=4,
 };
 
 struct GameState
@@ -31,6 +32,14 @@ struct GameState
 };
 
 GameState gameState;
+
+//Width and height for agent8
+const float AGENT8_WIDTH = 50.0f;
+const float AGENT8_HEIGHT = 100.0f;
+
+//Width and height for asteroids
+const float ASTEROID_WIDTH = 60.0f;
+const float ASTEROID_HEIGHT = 60.0f;
 
 //Agent8 move speed and mouse rotation
 const float AGENT8_MOVESPEED = 200.0f; //speed of agent8
@@ -50,12 +59,14 @@ const float ASTEROID_RADIUS = 30.0f;
 // Asteroid speed
 const float ASTEROID_SPEED = 1.0f;
 
+
 // function declaration
 void GemCreation();
 void AsteroidCreation();
 void GemBehaviour();
 void AsteroidBehaviour();
 void Agent8FlightControls(float elapsedTime);
+void CheckCollisions();
 void Draw();
 
 // The entry point for a Windows program
@@ -78,6 +89,7 @@ bool MainGameUpdate( float elapsedTime )
     GemBehaviour();
     AsteroidBehaviour();
     Agent8FlightControls(elapsedTime);
+    CheckCollisions();
     Draw();
 
     return Play::KeyDown( VK_ESCAPE );
@@ -94,11 +106,6 @@ void Draw()
 {
     Play::DrawBackground();
 
-    //Draw agent8
-    GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-    Play::DrawObjectRotated(agent8);
-    
-    
     // Draw the Gems
     Play::CollectGameObjectIDsByType(TYPE_GEM);
     std::vector<int> GemIDs = Play::CollectGameObjectIDsByType(TYPE_GEM);
@@ -116,10 +123,12 @@ void Draw()
         Play::DrawObject(Play::GetGameObject(i));
         Play::GetGameObject(i);
     }
-    
+
+    //Draw agent8
+    GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+    Play::DrawObjectRotated(agent8);
 
     Play::PresentDrawingBuffer();
-
 };
 
 void GemCreation()
@@ -185,7 +194,7 @@ void AsteroidBehaviour()
 void Agent8FlightControls(float elapsedTime)
 {
     GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
-    
+
     //Mouse position current
     Point2D mousePosition = Play::GetMousePos();
     float mouseX = mousePosition.x;
@@ -237,5 +246,56 @@ void Agent8FlightControls(float elapsedTime)
     else if (agent8.pos.y > DISPLAY_HEIGHT)
     {
         agent8.pos.y = 0;
+    }
+}
+
+bool CheckAABBCollision(const GameObject& obj1, const GameObject& obj2, float obj1Width, float obj1Height,float obj2Width, float obj2Height)
+{
+    //half width & half height of the bounding boxes
+    float obj1HalfWidth = obj1Width / 2.0f;
+    float obj1HalfHeight = obj1Height / 2.0f;
+    float obj2HalfWidth = obj2Width / 2.0f;
+    float obj2HalfHeight = obj2Height / 2.0f;
+
+    //centers of the bounding boxes
+    float obj1CenterX = obj1.pos.x + obj1HalfWidth;
+    float obj1CenterY = obj1.pos.y + obj1HalfHeight;
+    float obj2CenterX = obj2.pos.x + obj2HalfWidth;
+    float obj2CenterY = obj2.pos.y + obj2HalfHeight;
+
+    //distances between the centers of the bounding boxes
+    float dx = fabs(obj1CenterX - obj2CenterX);
+    float dy = fabs(obj1CenterY - obj2CenterY);
+
+    //checking for the collision
+    if (dx < obj1HalfWidth + obj2HalfWidth && dy < obj1HalfHeight + obj2HalfHeight)
+    {
+        return true; //collided
+    }
+
+    return false; //No collision
+}
+
+void CheckCollisions()
+{
+    GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
+
+    //Iteration through asteroids and check for the collisions with agent 8
+    Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+    std::vector<int>AsteroidIDs = Play::CollectGameObjectIDsByType(TYPE_ASTEROID);
+
+    for (int asteroidID : AsteroidIDs)
+    {
+        GameObject& asteroid = Play::GetGameObject(asteroidID);
+
+        // Check for collision (replace with your actual object dimensions)
+        if (CheckAABBCollision(agent8, asteroid, AGENT8_WIDTH, AGENT8_HEIGHT, ASTEROID_WIDTH, ASTEROID_HEIGHT))
+        {
+            //agent 8 position on top of the asteroid + standing upright
+            agent8.pos.y = asteroid.pos.y - AGENT8_HEIGHT ;
+            agent8.rotation = 0.0f;
+
+            //agent 8 walking on asteroid logic here
+        }
     }
 }
