@@ -62,7 +62,7 @@ const float ASTEROID_RADIUS = 30.0f;
 const float ASTEROID_SPEED = 1.0f;
 
 //Number of Meteors
-const int NUM_METEORS = 5;
+const int NUM_METEORS = 4;
 //Meteors radius
 const float METEOR_RADIUS = 30.0f;
 //Meteor speed
@@ -74,8 +74,9 @@ void AsteroidCreation();
 void MeteorCreation();
 void GemBehaviour();
 void AsteroidBehaviour();
+void MeteorBehaviour();
 void Agent8FlightControls(float elapsedTime);
-void CheckCollisions(float elapsedTime);
+bool CheckCollisions(float elapsedTime);
 void Draw();
 
 // The entry point for a Windows program
@@ -96,8 +97,10 @@ void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
 // Called by the PlayBuffer once for each frame of the game (60 times a second!)
 bool MainGameUpdate( float elapsedTime )
 {
+
     GemBehaviour();
     AsteroidBehaviour();
+    MeteorBehaviour();
     Agent8FlightControls(elapsedTime);
     CheckCollisions(elapsedTime);
     Draw();
@@ -113,7 +116,7 @@ bool MainGameUpdate( float elapsedTime )
         Play::DrawFontText("64px", "Game Over! press esc", Point2D(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2), Play::CENTRE);
         Play::PresentDrawingBuffer();
 
-        Sleep(200);
+        Sleep(250);
 
         if (Play::KeyDown(VK_ESCAPE))
         {
@@ -121,7 +124,11 @@ bool MainGameUpdate( float elapsedTime )
         }
     }
 
-    return false; //The game will continue running
+    if (CheckCollisions(elapsedTime)) 
+    {
+        return true;
+    }
+    return false; //the game will continue running
 }
 
 // Gets called once when the player quits the game 
@@ -203,8 +210,10 @@ void MeteorCreation()
     {
         float xPos = static_cast<float>(rand() % DISPLAY_WIDTH);
         float yPos = static_cast<float>(rand() % DISPLAY_HEIGHT);
-        Play::CreateGameObject(TYPE_METEOR, { xPos, yPos }, GEM_RADIUS, "meteor_2");
+
+        Play::CreateGameObject(TYPE_METEOR, { xPos, yPos }, GEM_RADIUS, "meteor_2");   
     }
+    
 }
 
 void GemBehaviour()
@@ -236,11 +245,31 @@ void AsteroidBehaviour()
         // Moving the asteroids upward
         obj_asteroid.pos.y -= ASTEROID_SPEED;
 
-        // Wrapping the asteroid to the opposite display area at random positions if out of bounds
+        // Wrapping the asteroids to the opposite display area at random positions if out of bounds
         if (obj_asteroid.pos.y < -ASTEROID_RADIUS)
         {
             obj_asteroid.pos.x = static_cast<float>(rand() % DISPLAY_WIDTH);
             obj_asteroid.pos.y = DISPLAY_HEIGHT + ASTEROID_RADIUS;
+        }
+    }
+}
+
+void MeteorBehaviour()
+{
+    //Meteor Behaviour going into update
+    std::vector<int> MeteorIDs = Play::CollectGameObjectIDsByType(TYPE_METEOR);
+    for (int i : MeteorIDs)
+    {
+        GameObject& obj_meteor = Play::GetGameObject(i);
+
+        // Moving the meteors upward
+        obj_meteor.pos.y -= METEOR_SPEED;
+
+        // Wrapping the meteors to the opposite display area at random positions if out of bounds
+        if (obj_meteor.pos.y < -METEOR_RADIUS)
+        {
+            obj_meteor.pos.x = static_cast<float>(rand() % DISPLAY_WIDTH);
+            obj_meteor.pos.y = DISPLAY_HEIGHT + ASTEROID_RADIUS;
         }
     }
 }
@@ -330,7 +359,7 @@ bool CheckAABBCollision(const GameObject& obj1, const GameObject& obj2, float ob
     return false; //No collision
 }
 
-void CheckCollisions(float elapsedTime)
+bool CheckCollisions(float elapsedTime)
 {
     GameObject& agent8 = Play::GetGameObjectByType(TYPE_AGENT8);
 
@@ -363,14 +392,38 @@ void CheckCollisions(float elapsedTime)
     {
         GameObject& gem = Play::GetGameObject(gemID);
 
-        // Check for collision 
+        // Checks for collision with agent8
         if (CheckAABBCollision(agent8, gem, AGENT8_WIDTH, AGENT8_HEIGHT, GEM_RADIUS * 2, GEM_RADIUS * 2))
         {
             // Collision occurred, increases the score and removes the gem
             gameState.score++;
             Play::DestroyGameObject(gemID);
 
-            // You can add any other logic or effects here when Agent 8 collects a gem
+            //I will add any other logic or effects here when Agent 8 collects a gem if I have time
         }
     }
+
+    Play::CollectGameObjectIDsByType(TYPE_METEOR);
+    std::vector<int> MeteorIDs = Play::CollectGameObjectIDsByType(TYPE_METEOR);
+    
+    for (int meteorID : MeteorIDs)
+    {
+        GameObject& meteor = Play::GetGameObject(meteorID);
+        
+
+        //checks for collision with agent8
+        if (CheckAABBCollision(agent8, meteor, AGENT8_WIDTH, AGENT8_HEIGHT, METEOR_RADIUS * 2, METEOR_RADIUS * 2))
+        {
+            
+            Play::DrawFontText("64px", "Game Over! Meteor collision", Point2D(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2), Play::CENTRE);
+            
+            Play::PresentDrawingBuffer();
+
+            Sleep(1000);
+
+            return true;
+        }
+    }
+
+    return false;
 }
