@@ -25,6 +25,7 @@ enum Agent8State
 struct GameState
 {
     int score = 0;
+    int agent8Health = 3; //Health for agent 8
     Agent8State agentState = STATE_APPEAR;
     bool isFlying = false; //is agent8 flying?   
 };
@@ -48,11 +49,11 @@ const float AGENT8_MOVESPEED = 200.0f; //speed of agent8
 const float ROTATION_SPEED = 2.0f;
 
 // Number of gems to create
-const int NUM_GEMS = 5;
+const int NUM_GEMS = 10;
 // Gem radius
 const float GEM_RADIUS = 20.0f;
 // Gem speed
-const float GEM_SPEED = 2.0f;
+const float GEM_SPEED = 3.0f;
 
 //Number of Asteroids
 const int NUM_ASTEROIDS = 3;
@@ -66,7 +67,9 @@ const int NUM_METEORS = 4;
 //Meteors radius
 const float METEOR_RADIUS = 30.0f;
 //Meteor speed
-const float METEOR_SPEED = 3.0f;
+const float METEOR_SPEED = 5.0f;
+//Timer for meteors
+float elapsedTimeSinceStart = 0.0f;
 
 // function declaration
 void GemCreation();
@@ -80,27 +83,34 @@ bool CheckCollisions(float elapsedTime);
 void Draw();
 
 // The entry point for a Windows program
-void MainGameEntry( PLAY_IGNORE_COMMAND_LINE )
+void MainGameEntry( PLAY_IGNORE_COMMAND_LINE)
 {
     Play::CreateManager( DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_SCALE );
     Play::CentreAllSpriteOrigins();
     Play::LoadBackground( "Data\\Backgrounds\\background1.png" );
+    Play::StartAudioLoop("music");
 
     //agent8 creation
     Play::CreateGameObject(TYPE_AGENT8, { 85, 75 }, 50, "agent8_fly");
  
     GemCreation(); 
-    AsteroidCreation();
-    MeteorCreation();
+    AsteroidCreation(); 
+    MeteorCreation();  
 }
 
 // Called by the PlayBuffer once for each frame of the game (60 times a second!)
 bool MainGameUpdate( float elapsedTime )
 {
+    elapsedTimeSinceStart += elapsedTime;
 
     GemBehaviour();
     AsteroidBehaviour();
-    MeteorBehaviour();
+    
+    if (elapsedTimeSinceStart >= 5.0f);
+    {
+        MeteorBehaviour();
+    }
+
     Agent8FlightControls(elapsedTime);
     CheckCollisions(elapsedTime);
     Draw();
@@ -115,6 +125,7 @@ bool MainGameUpdate( float elapsedTime )
     {
         Play::DrawFontText("64px", "Game Over! press esc", Point2D(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2), Play::CENTRE);
         Play::PresentDrawingBuffer();
+        Play::StopAudioLoop("music");
 
         Sleep(250);
 
@@ -175,8 +186,11 @@ void Draw()
 
     //game controls and score
     int val{ 0 };
-    Play::DrawFontText("64px", "Collect all the 5 Gems: " + std::to_string(gameState.score), Point2D(DISPLAY_WIDTH / 2, 40), Play::CENTRE);
-    Play::DrawFontText("64px", "Use arrow keys and mouse to control Agent8 ", Point2D(DISPLAY_WIDTH / 2, 650), Play::CENTRE);
+    Play::DrawFontText("64px", "Collect all the Gems: " + std::to_string(gameState.score), Point2D(DISPLAY_WIDTH / 2, 40), Play::CENTRE);
+    Play::DrawFontText("64px", "Use arrow keys and mouse to control Agent8", Point2D(DISPLAY_WIDTH / 2, 650), Play::CENTRE);
+
+    //Agent8 health
+    Play::DrawFontText("64px", "Health: " + std::to_string(gameState.agent8Health), Point2D(40, 40), Play::LEFT);
 
     Play::PresentDrawingBuffer();
 };
@@ -378,9 +392,6 @@ bool CheckCollisions(float elapsedTime)
             //agent 8 position on top of the asteroid + standing upright
             agent8.pos.y = asteroid.pos.y - AGENT8_HEIGHT;
             agent8.rotation = 0.0f;
-
-            agent8.spriteId = Play::GetSpriteId("agent8_left_7");
-            agent8.spriteId = Play::GetSpriteId("agent8_right_7");
         }
     }
 
@@ -398,6 +409,7 @@ bool CheckCollisions(float elapsedTime)
             // Collision occurred, increases the score and removes the gem
             gameState.score++;
             Play::DestroyGameObject(gemID);
+            Play::PlayAudio("reward");
 
             //I will add any other logic or effects here when Agent 8 collects a gem if I have time
         }
@@ -414,14 +426,26 @@ bool CheckCollisions(float elapsedTime)
         //checks for collision with agent8
         if (CheckAABBCollision(agent8, meteor, AGENT8_WIDTH, AGENT8_HEIGHT, METEOR_RADIUS * 2, METEOR_RADIUS * 2))
         {
-            
-            Play::DrawFontText("64px", "Game Over! Meteor collision", Point2D(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2), Play::CENTRE);
-            
-            Play::PresentDrawingBuffer();
+            gameState.agent8Health--;
 
-            Sleep(1000);
+            if (gameState.agent8Health <= 0)
+            {
+                Play::DrawFontText("64px", "Game Over! Meteor collision", Point2D(DISPLAY_WIDTH / 2, DISPLAY_HEIGHT / 2), Play::CENTRE);
+                Play::PresentDrawingBuffer();
+                Play::PlayAudio("combust");
+                Play::StopAudioLoop("music");
 
-            return true;
+                Sleep(1000);
+
+                return true;
+            } 
+            else
+            {
+                agent8.pos.x = DISPLAY_WIDTH / 2; // This should reset Agent8's position
+                agent8.pos.y = DISPLAY_HEIGHT - AGENT8_HEIGHT;
+                agent8.rotation = 0.0f;
+                Play::PlayAudio("clang");
+            } 
         }
     }
 
